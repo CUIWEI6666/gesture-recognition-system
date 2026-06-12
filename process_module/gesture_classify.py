@@ -1,106 +1,199 @@
-from utils.math import calculate_distance, calculate_angle
+from typing import List, Tuple, Dict, Any
+from collections import Counter
+import math
+
 
 class GestureClassifier:
-    """
-    @brief 手势分类器（基于MediaPipe 全部21个手部关键点）
-    @details 支持：数字1/2/3/4/5、OK、点赞、剪刀手、握拳、张开手掌
-    """
+    """手势分类器 - 支持数字手势 1-5"""
+
+    # 基础手势
+    GESTURE_OK = "OK"
+    GESTURE_THUMBS_UP = "THUMBS_UP"
+    GESTURE_FIST = "FIST"
+    GESTURE_PEACE = "PEACE"
+    GESTURE_OPEN_PALM = "OPEN_PALM"
+    GESTURE_ROCK = "ROCK"
+    GESTURE_CALL = "CALL"
+    GESTURE_LOVE = "LOVE"
+
+    # 数字手势 1-5
+    GESTURE_NUMBER_1 = "NUMBER_1"
+    GESTURE_NUMBER_2 = "NUMBER_2"
+    GESTURE_NUMBER_3 = "NUMBER_3"
+    GESTURE_NUMBER_4 = "NUMBER_4"
+    GESTURE_NUMBER_5 = "NUMBER_5"
+
+    GESTURE_UNKNOWN = "UNKNOWN"
+
+    # 英文显示名称
+    GESTURE_NAMES = {
+        GESTURE_OK: "OK",
+        GESTURE_THUMBS_UP: "Thumbs Up",
+        GESTURE_FIST: "Fist",
+        GESTURE_PEACE: "Peace",
+        GESTURE_OPEN_PALM: "Open Palm",
+        GESTURE_ROCK: "Rock",
+        GESTURE_CALL: "Call",
+        GESTURE_LOVE: "Love",
+        GESTURE_NUMBER_1: "1",
+        GESTURE_NUMBER_2: "2",
+        GESTURE_NUMBER_3: "3",
+        GESTURE_NUMBER_4: "4",
+        GESTURE_NUMBER_5: "5",
+        GESTURE_UNKNOWN: "Unknown"
+    }
+
     def __init__(self):
-        # ========== 完整21个关键点分组（全覆盖） ==========
-        self.wrist = 0                  # 手腕 基点
+        self.gesture_history = []
+        self.history_size = 5
 
-        # 大拇指 4个点：根关节、中关节、末关节、指尖
-        self.thumb = [1, 2, 3, 4]
-        # 食指 4个点
-        self.index = [5, 6, 7, 8]
-        # 中指 4个点
-        self.middle = [9, 10, 11, 12]
-        # 无名指 4个点
-        self.ring = [13, 14, 15, 16]
-        # 小指 4个点
-        self.pinky = [17, 18, 19, 20]
+    def classify(self, finger_states: List[int],
+                 landmarks: List = None,
+                 handedness: str = "Right") -> str:
+        if not finger_states or len(finger_states) < 5:
+            return self.GESTURE_UNKNOWN
 
-        # 把五根手指统一存入列表，方便遍历：拇指、食指、中指、无名指、小指
-        self.fingers = [self.thumb, self.index, self.middle, self.ring, self.pinky]
+        thumb, index, middle, ring, pinky = finger_states
 
-    def get_single_finger_state(self, landmarks, finger_points):
-        """
-        @brief 单根手指状态判断（使用该手指全部4个关键点）
-        @param landmarks: 整只手21个关键点
-        @param finger_points: 当前手指的4个点位 [根,中,末,尖]
-        @return int: 1=伸直  0=弯曲
-        """
-        root = landmarks[finger_points[0]]
-        mid = landmarks[finger_points[1]]
-        end = landmarks[finger_points[2]]
-        tip = landmarks[finger_points[3]]
+        # 计算伸直的手指数量
+        extended_count = sum(finger_states)
 
-        # 利用 根-中-末 三点计算夹角（使用手指全部关节点）
-        angle = calculate_angle(root, mid, end)
-        # 伸直：夹角接近180°；弯曲：夹角明显变小
-        if angle > 120:
-            return 1
-        else:
+        # ========== 数字手势 1-5 ==========
+
+        # 数字 1: 只有食指伸直
+        if extended_count == 1 and index == 1 and thumb == 0 and middle == 0 and ring == 0 and pinky == 0:
+            return self.GESTURE_NUMBER_1
+
+        # 数字 2: 食指和中指伸直（V字手势）
+        if extended_count == 2 and index == 1 and middle == 1 and thumb == 0 and ring == 0 and pinky == 0:
+            return self.GESTURE_NUMBER_2
+
+        # 数字 3: 食指、中指、无名指伸直
+        if extended_count == 3 and index == 1 and middle == 1 and ring == 1 and thumb == 0 and pinky == 0:
+            return self.GESTURE_NUMBER_3
+
+        # 数字 4: 食指、中指、无名指、小指伸直（拇指弯曲）
+        if extended_count == 4 and index == 1 and middle == 1 and ring == 1 and pinky == 1 and thumb == 0:
+            return self.GESTURE_NUMBER_4
+
+        # 数字 5: 五根手指全部伸直（张开手掌）
+        if extended_count == 5:
+            return self.GESTURE_NUMBER_5
+
+        # ========== 其他手势 ==========
+
+        # 1. 握拳 - 所有手指弯曲
+        if extended_count == 0:
+            return self.GESTURE_FIST
+
+        # 2. 点赞 - 只有拇指伸直
+        if thumb == 1 and extended_count == 1:
+            return self.GESTURE_THUMBS_UP
+
+        # 3. 剪刀手/胜利 - 如果食指和中指伸直，且拇指弯曲（已经覆盖，但保留作为备用）
+        if index == 1 and middle == 1 and ring == 0 and pinky == 0:
+            if thumb == 0:
+                return self.GESTURE_PEACE
+
+        # 4. OK手势 - 拇指和食指形成圆圈
+        if index == 0 and thumb == 0 and middle == 1 and ring == 1 and pinky == 1:
+            if landmarks:
+                thumb_tip = landmarks[4]
+                index_tip = landmarks[8]
+                distance = math.sqrt(
+                    (thumb_tip.x - index_tip.x) ** 2 +
+                    (thumb_tip.y - index_tip.y) ** 2
+                )
+                if distance < 0.05:
+                    return self.GESTURE_OK
+            return self.GESTURE_OK
+
+        # 5. 摇滚手势 - 食指和小指伸直
+        if index == 1 and pinky == 1 and middle == 0 and ring == 0:
+            return self.GESTURE_ROCK
+
+        # 6. 打电话手势 - 拇指和小指伸直
+        if thumb == 1 and pinky == 1 and index == 0 and middle == 0 and ring == 0:
+            return self.GESTURE_CALL
+
+        return self.GESTURE_UNKNOWN
+
+    def _get_thumb_angle(self, landmarks) -> float:
+        """计算拇指角度"""
+        try:
+            thumb_tip = landmarks[4]
+            thumb_ip = landmarks[3]
+            thumb_mcp = landmarks[2]
+
+            v1 = (thumb_tip.x - thumb_ip.x, thumb_tip.y - thumb_ip.y)
+            v2 = (thumb_mcp.x - thumb_ip.x, thumb_mcp.y - thumb_ip.y)
+
+            dot = v1[0] * v2[0] + v1[1] * v2[1]
+            mag1 = math.sqrt(v1[0] ** 2 + v1[1] ** 2)
+            mag2 = math.sqrt(v2[0] ** 2 + v2[1] ** 2)
+
+            if mag1 == 0 or mag2 == 0:
+                return 0
+
+            cos_angle = dot / (mag1 * mag2)
+            cos_angle = max(-1.0, min(1.0, cos_angle))
+
+            return math.degrees(math.acos(cos_angle))
+        except:
             return 0
 
-    def get_all_fingers_state(self, landmarks):
-        """
-        @brief 遍历5根手指，得到全部手指状态（用到完整21个关键点）
-        @return list: [拇指,食指,中指,无名指,小指]  1伸直 / 0弯曲
-        """
-        state_list = []
-        # 遍历5根手指，每根都用自身4个关键点判断
-        for finger in self.fingers:
-            s = self.get_single_finger_state(landmarks, finger)
-            state_list.append(s)
-        return state_list
+    def classify_with_confidence(self, finger_states: List[int],
+                                 landmarks: List = None,
+                                 handedness: str = "Right") -> tuple:
+        gesture = self.classify(finger_states, landmarks, handedness)
 
-    def classify(self, landmarks):
-        """
-        @brief 核心手势识别（基于21个关键点综合判断）
-        @param landmarks: 单只手完整21个关键点坐标
-        @return str: 识别结果
-        """
-        # 1. 获取五根手指整体状态（已使用全部21点）
-        f_state = self.get_all_fingers_state(landmarks)
+        # 根据手指数量计算置信度
+        extended_count = sum(finger_states)
 
-        # 2. 提取常用单点（后续判断复用）
-        wrist_pt = landmarks[self.wrist]
-        thumb_tip = landmarks[self.thumb[3]]
-        index_tip = landmarks[self.index[3]]
+        confidence_map = {
+            self.GESTURE_FIST: 0.95 if extended_count == 0 else 0.85,
+            self.GESTURE_NUMBER_1: 0.95 if extended_count == 1 else 0.85,
+            self.GESTURE_NUMBER_2: 0.95 if extended_count == 2 else 0.85,
+            self.GESTURE_NUMBER_3: 0.95 if extended_count == 3 else 0.85,
+            self.GESTURE_NUMBER_4: 0.95 if extended_count == 4 else 0.85,
+            self.GESTURE_NUMBER_5: 0.95 if extended_count == 5 else 0.85,
+            self.GESTURE_PEACE: 0.92,
+            self.GESTURE_THUMBS_UP: 0.90,
+            self.GESTURE_OK: 0.88,
+            self.GESTURE_ROCK: 0.90,
+            self.GESTURE_CALL: 0.85,
+        }
 
-        # ==================== 数字手势 1~5 ====================
-        # 数字1：仅食指伸直
-        if f_state == [0, 1, 0, 0, 0]:
-            return "数字 1"
-        # 数字2：食指、中指伸直（剪刀手）
-        elif f_state == [0, 1, 1, 0, 0]:
-            return "数字 2 / 剪刀手"
-        # 数字3：食指、中指、无名指伸直
-        elif f_state == [0, 1, 1, 1, 0]:
-            return "数字 3"
-        # 数字4：食指、中指、无名指、小指伸直
-        elif f_state == [0, 1, 1, 1, 1]:
-            return "数字 4"
-        # 数字5：全部手指伸直（张开手掌）
-        elif f_state == [1, 1, 1, 1, 1]:
-            return "数字 5 / 张开手掌"
+        confidence = confidence_map.get(gesture, 0.70)
 
-        # ==================== 常规手势 ====================
-        # 握拳：所有手指全部弯曲
-        elif f_state == [0, 0, 0, 0, 0]:
-            return "握拳"
+        if gesture == self.GESTURE_UNKNOWN:
+            confidence = 0.35
 
-        # 点赞：仅大拇指伸直，其余四指弯曲，且大拇指向上抬起
-        elif f_state[0] == 1 and f_state[1:] == [0, 0, 0, 0]:
-            # 结合手腕+拇指关键点判断方向（用到手腕+拇指全部点位）
-            if thumb_tip.y < wrist_pt.y:
-                return "点赞"
+        return gesture, confidence
 
-        # OK手势：拇指指尖 & 食指指尖相触，其余手指伸直
-        tip_dist = calculate_distance(thumb_tip, index_tip)
-        if tip_dist < 0.06 and f_state[2] == 1 and f_state[3] == 1 and f_state[4] == 1:
-            return "OK 手势"
+    def smooth_gesture(self, current_gesture: str) -> str:
+        """平滑手势识别结果"""
+        self.gesture_history.append(current_gesture)
+        if len(self.gesture_history) > self.history_size:
+            self.gesture_history.pop(0)
 
-        # 无法识别
-        return "未知手势"
+        counter = Counter(self.gesture_history)
+        most_common = counter.most_common(1)[0]
+
+        if most_common[1] >= self.history_size // 2 + 1:
+            return most_common[0]
+        return current_gesture
+
+    def get_gesture_name(self, gesture_type: str) -> str:
+        return self.GESTURE_NAMES.get(gesture_type, self.GESTURE_NAMES[self.GESTURE_UNKNOWN])
+
+    def get_gesture_number(self, gesture_type: str) -> int:
+        """获取手势对应的数字（如果是数字手势）"""
+        number_map = {
+            self.GESTURE_NUMBER_1: 1,
+            self.GESTURE_NUMBER_2: 2,
+            self.GESTURE_NUMBER_3: 3,
+            self.GESTURE_NUMBER_4: 4,
+            self.GESTURE_NUMBER_5: 5,
+        }
+        return number_map.get(gesture_type, 0)
