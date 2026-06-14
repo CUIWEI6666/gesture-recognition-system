@@ -5,28 +5,28 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 class DisplayManager:
-    """【答辩级终极美化版】手势识别界面"""
+    """手势识别界面 Интерфейс распознавания жестов"""
 
     def __init__(self, window_name: str = "Gesture Recognition System"):
         self.window_name = window_name
-        # 加载字体（Windows自带，无需额外安装）
+        # 加载字体  Загрузка шрифта
         self.font_normal = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 20)
-        self.font_large = ImageFont.truetype("C:/Windows/Fonts/msyhbd.ttc", 120)  # 粗体大数字
+        self.font_large = ImageFont.truetype("C:/Windows/Fonts/msyhbd.ttc", 120) 
         self.font_small = ImageFont.truetype("C:/Windows/Fonts/msyh.ttc", 14)
 
-        # 高级配色（科技感蓝绿主题）
+        # 配色  цветовая гамма
         self.colors = {
-            'bg_card': (45, 45, 55),  # 卡片深灰背景
-            'border_blue': (255, 180, 0),  # 蓝色渐变边框
-            'accent_green': (100, 255, 120),  # 成功绿
-            'accent_orange': (0, 170, 255),  # 警告橙
-            'accent_red': (80, 80, 255),  # 错误红
-            'accent_purple': (255, 80, 255),  # 数字紫
-            'text_white': (255, 255, 255),  # 白色文字
+            'bg_card': (45, 45, 55),  
+            'border_blue': (255, 180, 0), 
+            'accent_green': (100, 255, 120), 
+            'accent_orange': (0, 170, 255),  
+            'accent_red': (80, 80, 255),  
+            'accent_purple': (255, 80, 255), 
+            'text_white': (255, 255, 255),  
             'shadow': (0, 0, 0)  # 阴影
         }
 
-        # 手势图标（无问号问题）
+        # 手势图标 с иконкой жеста
         self.gesture_names = {
             "1": "数字 1", "2": "数字 2", "3": "数字 3", "4": "数字 4", "5": "数字 5",
             "Fist": "握拳", "Thumbs Up": "点赞", "OK": "OK确认", "Peace": "剪刀手",
@@ -35,11 +35,11 @@ class DisplayManager:
 
         self.toast_message = ""
         self.toast_timer = 0
-        self.gesture_anim_timer = 0  # 手势触发动画计时器
+        self.gesture_anim_timer = 0  # 手势触发动画计时器 Таймер анимации, запускаемый жестом
 
     def _blur_background(self, img: np.ndarray, x1: int, y1: int, x2: int, y2: int,
                          blur_radius: int = 15) -> np.ndarray:
-        """【真实毛玻璃】高斯模糊背景，iOS风格"""
+        """高斯模糊背景  Размытый фон Гаусса"""
         # 截取区域做高斯模糊
         roi = img[y1:y2, x1:x2]
         blurred = cv2.GaussianBlur(roi, (blur_radius, blur_radius), 0)
@@ -52,12 +52,12 @@ class DisplayManager:
 
     def _put_text_with_shadow(self, img: np.ndarray, text: str, pos: tuple, font, color: tuple,
                               offset: int = 2) -> np.ndarray:
-        """文字加阴影，立体感拉满"""
+        """文字加阴影，立体感"""
         img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         draw = ImageDraw.Draw(img_pil)
-        # 先画阴影
+        # 阴影 тень
         draw.text((pos[0] + offset, pos[1] + offset), text, font=font, fill=self.colors['shadow'])
-        # 再画文字
+        # 文字 текст
         draw.text(pos, text, font=font, fill=color)
         return cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
 
@@ -68,23 +68,23 @@ class DisplayManager:
 
     def draw_info_panel(self, frame: np.ndarray, fps: float,
                         num_hands: int, debug_mode: bool) -> np.ndarray:
-        """【优化】左侧信息栏（毛玻璃卡片）"""
+        """左侧信息栏"""
         output = frame.copy()
         h, w = output.shape[:2]
 
         # 毛玻璃卡片
         output = self._blur_background(output, 15, 15, 240, 120)
 
-        # FPS显示（带颜色分级）
+        # FPS显示  Отображение FPS
         fps_color = self.colors['accent_green'] if fps >= 25 else self.colors['accent_orange'] if fps >= 15 else \
         self.colors['accent_red']
         output = self._put_text_with_shadow(output, f"⚡ 帧率: {fps:.0f} FPS", (30, 25), self.font_normal, fps_color)
 
-        # 手数量
+        # 手数量  Количество рук
         output = self._put_text_with_shadow(output, f"✋ 检测到手: {num_hands} 只", (30, 60), self.font_normal,
                                             self.colors['text_white'])
 
-        # 调试状态
+        # 调试状态  Режим отладки
         if debug_mode:
             output = self._put_text_with_shadow(output, "🔧 调试模式: 开启", (30, 95), self.font_small,
                                                 self.colors['accent_orange'])
@@ -93,12 +93,12 @@ class DisplayManager:
 
     def draw_gesture_result(self, frame: np.ndarray, gestures: List[str],
                             confidences: List[float]) -> np.ndarray:
-        """【优化】右侧手势结果卡片"""
+        """右侧手势结果卡片  Панель результатов жестов справа"""
         output = frame.copy()
         h, w = output.shape[:2]
 
         for i, (gesture, conf) in enumerate(zip(gestures, confidences)):
-            # 置信度颜色
+            # 置信度颜色  цвет уверенности
             if conf > 0.75:
                 color = self.colors['accent_green']
                 level = "高置信度"
@@ -109,9 +109,9 @@ class DisplayManager:
                 color = self.colors['accent_red']
                 level = "低置信度"
 
-            # 【核心】数字手势居中特效（外发光+阴影+渐变）
+            # 数字手势居中特效（外发光+阴影+渐变） Цифровой жест с эффектом центрирования (внешнее свечение + тень + градиент)
             if gesture in ["1", "2", "3", "4", "5"]:
-                # 动画效果：手势刚触发时放大
+                # 动画效果：手势刚触发时放大  Эффект анимации числа: увеличивается при первом касании жеста
                 scale = 1.1 if self.gesture_anim_timer > 30 else 1.0
                 font_size = int(120 * scale)
                 font_large = ImageFont.truetype("C:/Windows/Fonts/msyhbd.ttc", font_size)
@@ -120,7 +120,7 @@ class DisplayManager:
                 text_x = (w - (text_size[2] - text_size[0])) // 2
                 text_y = (h - (text_size[3] - text_size[1])) // 2
 
-                # 3层外发光+阴影+主体文字
+                # 外发光+阴影+主体文字  Внешнее свечение + тень + основной текст
                 output = self._put_text_with_shadow(output, gesture, (text_x, text_y), font_large,
                                                     self.colors['accent_purple'], offset=4)
                 output = self._put_text_with_shadow(output, gesture, (text_x, text_y), font_large,
@@ -128,20 +128,20 @@ class DisplayManager:
                 output = self._put_text_with_shadow(output, gesture, (text_x, text_y), font_large,
                                                     self.colors['text_white'])
 
-            # 右侧手势卡片
+            # 右侧手势卡片  Карточка жестов справа
             card_x, card_y = w - 270, 15 + i * 95
             output = self._blur_background(output, card_x, card_y, w - 15, card_y + 85)
 
-            # 手势名称
+            # 手势名称  Название жеста
             gesture_name = self.gesture_names.get(gesture, "未识别")
             output = self._put_text_with_shadow(output, gesture_name, (card_x + 20, card_y + 25), self.font_normal,
                                                 color)
 
-            # 渐变置信度进度条
+            # 渐变置信度进度条  Прогресс-бар с градиентной степенью уверенности
             bar_w = int(200 * conf)
             cv2.rectangle(output, (card_x + 20, card_y + 55), (card_x + 220, card_y + 68), (30, 30, 40), -1,
                           cv2.LINE_AA)
-            # 渐变进度条
+            # 渐变进度条  градиентная полоса прогресса
             for x in range(bar_w):
                 ratio = x / 200
                 bar_color = (
@@ -159,22 +159,22 @@ class DisplayManager:
         return output
 
     def draw_controls(self, frame: np.ndarray) -> np.ndarray:
-        """【优化】底部状态栏"""
+        """底部状态栏  нижняя панель состояния"""
         output = frame.copy()
         h, w = output.shape[:2]
 
-        # 底部毛玻璃状态栏
+        # 底部毛玻璃状态栏 Нижняя панель состояния с матовым стеклом
         output = self._blur_background(output, 15, h - 50, w - 15, h - 15)
         output = self._put_text_with_shadow(output, "⌨️  Q退出  |  D调试  |  H帮助", (w // 2 - 130, h - 42),
                                             self.font_small, self.colors['text_white'])
-
-        # Toast触发提示
+ 
+        # Toast触发提示  Всплывающее уведомление Toast
         if self.toast_timer > 0:
             self.toast_timer -= 1
             text_size = self.font_normal.getbbox(self.toast_message)
             text_w = text_size[2] - text_size[0]
             toast_x = (w - text_w) // 2
-            # 绿色毛玻璃提示框
+            # 绿色毛玻璃提示框  зеленое матовое всплывающее окно
             output = self._blur_background(output, toast_x - 25, h // 2 - 35, toast_x + text_w + 25, h // 2 + 25)
             output = self._put_text_with_shadow(output, self.toast_message, (toast_x, h // 2 - 25), self.font_normal,
                                                 self.colors['accent_green'])
@@ -182,7 +182,7 @@ class DisplayManager:
         return output
 
     def draw_help_screen(self, frame: np.ndarray) -> np.ndarray:
-        """【优化】全屏帮助界面"""
+        """全屏帮助界面  Полноэкранная справка"""
         output = frame.copy()
         h, w = output.shape[:2]
 
