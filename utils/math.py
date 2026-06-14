@@ -26,16 +26,16 @@ def calculate_angle(point1: Tuple[float, float],
 
 
 def get_finger_states(landmarks) -> List[int]:
-    """获取5个手指的伸直状态"""
+    """获取5个手指的伸直状态 Получить состояние выпрямления пяти пальцев"""
     fingers = []
 
-    # 拇指
+    # 拇指 большой палец
     if landmarks[4].x < landmarks[3].x:
         fingers.append(1)
     else:
         fingers.append(0)
 
-    # 其他四指
+    # 其他四指 остальные четыре пальца
     tips = [8, 12, 16, 20]
     dips = [6, 10, 14, 18]
 
