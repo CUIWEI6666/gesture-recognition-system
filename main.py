@@ -23,9 +23,9 @@ class GestureRecognitionSystem:
 
         self.last_action_time = 0
         self.action_cooldown = 1.0
-        self.last_gesture = None  # 新增：上一次触发的手势
+        self.last_gesture = None  # 新增：上一次触发的手势  Последний сработавший жест
 
-        # 手势动作映射（包括数字1-5）
+        # 手势动作映射（包括数字1-5） Сопоставление жестов (включая цифры 1-5)
         self.gesture_actions = {
             'NUMBER_1': self._action_number_1,
             'NUMBER_2': self._action_number_2,
@@ -99,16 +99,15 @@ class GestureRecognitionSystem:
             self.last_action_time = current_time
 
     def _execute_gesture_action(self, gesture: str) -> None:
-        """【优化版】手势交互：加Toast弹窗反馈、智能防抖"""
+        """手势交互：加Toast弹窗反馈、防抖  Жестовое взаимодействие: добавление всплывающих уведомлений Toast и подавление дребезга"""
         current_time = time.time()
-        # 防抖升级：手势保持0.6秒才触发，彻底解决误触
         if gesture == self.last_gesture and (current_time - self.last_action_time) < self.action_cooldown:
             return
 
         self.last_gesture = gesture
         self.last_action_time = current_time
 
-        # 手势对应提示文案
+        # 手势对应提示文案  Текст подсказки для жестов
         gesture_messages = {
             'NUMBER_1': "✅ 触发手势: 数字 1",
             'NUMBER_2': "✅ 触发手势: 数字 2",
@@ -125,9 +124,9 @@ class GestureRecognitionSystem:
         }
 
         if gesture in gesture_messages:
-            # 屏幕显示Toast弹窗反馈（视觉触发提示）
+            # 屏幕显示Toast弹窗反馈 Экран показывает всплывающее уведомление Toast
             self.display.show_toast(gesture_messages[gesture])
-            # 控制台打印日志
+            # 打印日志     Печать журнала    
             print(gesture_messages[gesture])
 
     def initialize(self) -> bool:
@@ -168,12 +167,12 @@ class GestureRecognitionSystem:
                 frame = cv2.flip(frame, 1)
                 results = self.detector.detect(frame)
 
-                # 执行手势动作
+                # 执行手势动作  Выполнить жест
                 if results['success'] and results['gestures']:
                     for gesture in results['gestures']:
                         self._execute_gesture_action(gesture)
 
-                # 绘制UI
+                # 绘制UI Рисовать UI
                 display_frame = self.display.draw_info_panel(
                     frame, self.camera.fps, results['num_hands'], self.debug_mode
                 )
