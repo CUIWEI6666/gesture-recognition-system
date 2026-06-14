@@ -4,9 +4,12 @@ import math
 
 
 class GestureClassifier:
-    """手势分类器 - 支持数字手势 1-5"""
+    """
+    Классификатор жестов рук - поддерживает цифровые жесты от 1 до 5
+    手势分类器 - 支持数字手势 1-5
+    """
 
-    # 基础手势
+    # Базовые жесты 基础手势
     GESTURE_OK = "OK"
     GESTURE_THUMBS_UP = "THUMBS_UP"
     GESTURE_FIST = "FIST"
@@ -16,7 +19,7 @@ class GestureClassifier:
     GESTURE_CALL = "CALL"
     GESTURE_LOVE = "LOVE"
 
-    # 数字手势 1-5
+    # Цифровые жесты 1-5 数字手势 1-5
     GESTURE_NUMBER_1 = "NUMBER_1"
     GESTURE_NUMBER_2 = "NUMBER_2"
     GESTURE_NUMBER_3 = "NUMBER_3"
@@ -25,7 +28,7 @@ class GestureClassifier:
 
     GESTURE_UNKNOWN = "UNKNOWN"
 
-    # 英文显示名称
+    # Отображаемые наименования на английском 英文显示名称
     GESTURE_NAMES = {
         GESTURE_OK: "OK",
         GESTURE_THUMBS_UP: "Thumbs Up",
@@ -55,47 +58,47 @@ class GestureClassifier:
 
         thumb, index, middle, ring, pinky = finger_states
 
-        # 计算伸直的手指数量
+        # Подсчет выпрямленных пальцев 计算伸直的手指数量
         extended_count = sum(finger_states)
 
-        # ========== 数字手势 1-5 ==========
+        # ========== Цифровые жесты 1-5 数字手势 1-5 ==========
 
-        # 数字 1: 只有食指伸直
+        # Цифра 1: только указательный палец выпрямлен 数字 1: 只有食指伸直
         if extended_count == 1 and index == 1 and thumb == 0 and middle == 0 and ring == 0 and pinky == 0:
             return self.GESTURE_NUMBER_1
 
-        # 数字 2: 食指和中指伸直（V字手势）
+        # Цифра 2: выпрямлены указательный и средний палец (жест V) 数字 2: 食指和中指伸直（V字手势）
         if extended_count == 2 and index == 1 and middle == 1 and thumb == 0 and ring == 0 and pinky == 0:
             return self.GESTURE_NUMBER_2
 
-        # 数字 3: 食指、中指、无名指伸直
+        # Цифра 3: выпрямлены указательный, средний и безымянный палец 数字 3: 食指、中指、无名指伸直
         if extended_count == 3 and index == 1 and middle == 1 and ring == 1 and thumb == 0 and pinky == 0:
             return self.GESTURE_NUMBER_3
 
-        # 数字 4: 食指、中指、无名指、小指伸直（拇指弯曲）
+        # Цифра 4: выпрямлены все пальцы кроме большого 数字 4: 食指、中指、无名指、小指伸直（拇指弯曲）
         if extended_count == 4 and index == 1 and middle == 1 and ring == 1 and pinky == 1 and thumb == 0:
             return self.GESTURE_NUMBER_4
 
-        # 数字 5: 五根手指全部伸直（张开手掌）
+        # Цифра 5: все пять пальцев выпрямлены (открытая ладонь) 数字 5: 五根手指全部伸直（张开手掌）
         if extended_count == 5:
             return self.GESTURE_NUMBER_5
 
-        # ========== 其他手势 ==========
+        # ========== Другие жесты 其他手势 ==========
 
-        # 1. 握拳 - 所有手指弯曲
+        # 1. Кулак - все пальцы согнуты 握拳 - 所有手指弯曲
         if extended_count == 0:
             return self.GESTURE_FIST
 
-        # 2. 点赞 - 只有拇指伸直
+        # 2. Большой палец вверх - только большой палец выпрямлен 点赞 - 只有拇指伸直
         if thumb == 1 and extended_count == 1:
             return self.GESTURE_THUMBS_UP
 
-        # 3. 剪刀手/胜利 - 如果食指和中指伸直，且拇指弯曲（已经覆盖，但保留作为备用）
+        # 3. Жест мира / ножницы - указательный и средний палец выпрямлены 剪刀手/胜利 - 如果食指和中指伸直，且拇指弯曲（已经覆盖，但保留作为备用）
         if index == 1 and middle == 1 and ring == 0 and pinky == 0:
             if thumb == 0:
                 return self.GESTURE_PEACE
 
-        # 4. OK手势 - 拇指和食指形成圆圈
+        # 4. Жест OK - большой и указательный палец образуют круг OK手势 - 拇指和食指形成圆圈
         if index == 0 and thumb == 0 and middle == 1 and ring == 1 and pinky == 1:
             if landmarks:
                 thumb_tip = landmarks[4]
@@ -108,18 +111,21 @@ class GestureClassifier:
                     return self.GESTURE_OK
             return self.GESTURE_OK
 
-        # 5. 摇滚手势 - 食指和小指伸直
+        # 5. Рок-жест - указательный и мизинец выпрямлены 摇滚手势 - 食指和小指伸直
         if index == 1 and pinky == 1 and middle == 0 and ring == 0:
             return self.GESTURE_ROCK
 
-        # 6. 打电话手势 - 拇指和小指伸直
+        # 6. Жест звонка - большой палец и мизинец выпрямлены 打电话手势 - 拇指和小指伸直
         if thumb == 1 and pinky == 1 and index == 0 and middle == 0 and ring == 0:
             return self.GESTURE_CALL
 
         return self.GESTURE_UNKNOWN
 
     def _get_thumb_angle(self, landmarks) -> float:
-        """计算拇指角度"""
+        """
+        Вычисление угла наклона большого пальца
+        计算拇指角度
+        """
         try:
             thumb_tip = landmarks[4]
             thumb_ip = landmarks[3]
@@ -147,7 +153,7 @@ class GestureClassifier:
                                  handedness: str = "Right") -> tuple:
         gesture = self.classify(finger_states, landmarks, handedness)
 
-        # 根据手指数量计算置信度
+        # Расчет достоверности по количеству выпрямленных пальцев 根据手指数量计算置信度
         extended_count = sum(finger_states)
 
         confidence_map = {
@@ -172,7 +178,10 @@ class GestureClassifier:
         return gesture, confidence
 
     def smooth_gesture(self, current_gesture: str) -> str:
-        """平滑手势识别结果"""
+        """
+        Сглаживание результатов распознавания жестов
+        平滑手势识别结果
+        """
         self.gesture_history.append(current_gesture)
         if len(self.gesture_history) > self.history_size:
             self.gesture_history.pop(0)
@@ -188,7 +197,10 @@ class GestureClassifier:
         return self.GESTURE_NAMES.get(gesture_type, self.GESTURE_NAMES[self.GESTURE_UNKNOWN])
 
     def get_gesture_number(self, gesture_type: str) -> int:
-        """获取手势对应的数字（如果是数字手势）"""
+        """
+        Получение цифры, соответствующей жесту (для цифровых жестов)
+        获取手势对应的数字（如果是数字手势）
+        """
         number_map = {
             self.GESTURE_NUMBER_1: 1,
             self.GESTURE_NUMBER_2: 2,
