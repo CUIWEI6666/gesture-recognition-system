@@ -5,7 +5,7 @@ from typing import Dict, Any
 
 
 class BaseDetector(ABC):
-    """抽象基类，定义检测器的通用接口"""
+    """抽象基类，定义检测器的通用接口 / Определение общего интерфейса для детектора"""
 
     def __init__(self):
         self.is_initialized = False
@@ -25,4 +25,4 @@ class BaseDetector(ABC):
 
     def set_debug_mode(self, enabled: bool) -> None:
         self.debug_mode = enabled
-        print(f"调试模式: {'开启' if enabled else '关闭'}")
+        print(f"调试模式/Режим отладки: {'开启/включить' if enabled else '关闭/Закрыть'}")
