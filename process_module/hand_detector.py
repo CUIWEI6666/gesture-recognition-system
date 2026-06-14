@@ -12,7 +12,10 @@ import os
 
 
 class HandDetector(BaseDetector):
-    """手部检测器子类 - 兼容新版 MediaPipe"""
+    """
+    Дочерний класс детектора рук - совместимость с новой версией MediaPipe
+    手部检测器子类 - 兼容新版 MediaPipe
+    """
 
     def __init__(self, max_num_hands: int = 2, min_detection_confidence: float = 0.5):
         super().__init__()
@@ -23,7 +26,10 @@ class HandDetector(BaseDetector):
         self.model_path = "hand_landmarker.task"
 
     def _download_model(self) -> bool:
-        """下载手势识别模型"""
+        """
+        Загрузка модели для распознавания жестов
+        下载手势识别模型
+        """
         if os.path.exists(self.model_path):
             return True
 
@@ -61,16 +67,19 @@ class HandDetector(BaseDetector):
             return False
 
     def _get_finger_states(self, landmarks) -> List[int]:
-        """获取手指状态"""
+        """
+        Определение состояния пальцев (согнут/выпрямлен)
+        获取手指状态
+        """
         fingers = []
 
-        # 拇指 (根据x坐标)
+        # Большой палец (определение по координате X) 拇指 (根据x坐标)
         if landmarks[4].x < landmarks[3].x:
             fingers.append(1)
         else:
             fingers.append(0)
 
-        # 其他四指 (根据y坐标)
+        # Остальные четыре пальца (определение по координате Y) 其他四指 (根据y坐标)
         tips = [8, 12, 16, 20]
         dips = [6, 10, 14, 18]
 
@@ -83,26 +92,29 @@ class HandDetector(BaseDetector):
         return fingers
 
     def _draw_hand_landmarks(self, frame: np.ndarray, hand_landmarks, idx: int) -> np.ndarray:
-        """绘制21个手部关键点和骨架连线"""
+        """
+        Отрисовка 21 ключевой точки и скелета руки
+        绘制21个手部关键点和骨架连线
+        """
         h, w = frame.shape[:2]
 
-        # 定义骨架连接线（标准21点连接）
+        # Определение линий соединения скелета (стандартное соединение 21 точек) 定义骨架连接线（标准21点连接）
         connections = [
-            # 拇指
+            # Большой палец 拇指
             (0, 1), (1, 2), (2, 3), (3, 4),
-            # 食指
+            # Указательный палец 食指
             (0, 5), (5, 6), (6, 7), (7, 8),
-            # 中指
+            # Средний палец 中指
             (0, 9), (9, 10), (10, 11), (11, 12),
-            # 无名指
+            # Безымянный палец 无名指
             (0, 13), (13, 14), (14, 15), (15, 16),
-            # 小指
+            # Мизинец 小指
             (0, 17), (17, 18), (18, 19), (19, 20),
-            # 手掌连接（手指根部之间）
+            # Соединения ладони (между основаниями пальцев) 手掌连接（手指根部之间）
             (5, 9), (9, 13), (13, 17)
         ]
 
-        # 绘制连接线
+        # Отрисовка соединительных линий 绘制连接线
         for connection in connections:
             start_idx, end_idx = connection
             if start_idx < len(hand_landmarks) and end_idx < len(hand_landmarks):
@@ -112,18 +124,18 @@ class HandDetector(BaseDetector):
                              int(hand_landmarks[end_idx].y * h))
                 cv2.line(frame, start_point, end_point, (0, 255, 0), 2)
 
-        # 绘制21个关键点
+        # Отрисовка 21 ключевой точки руки 绘制21个关键点
         for i, landmark in enumerate(hand_landmarks):
             x = int(landmark.x * w)
             y = int(landmark.y * h)
 
-            if i == 0:  # 手腕
+            if i == 0:  # Запястье 手腕
                 color = (255, 255, 0)
                 radius = 6
-            elif i in [4, 8, 12, 16, 20]:  # 指尖
+            elif i in [4, 8, 12, 16, 20]:  # Кончики пальцев 指尖
                 color = (0, 0, 255)
                 radius = 5
-            else:  # 关节
+            else:  # Суставы пальцев 关节
                 color = (255, 0, 0)
                 radius = 3
 
@@ -209,12 +221,12 @@ class HandDetector(BaseDetector):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             return output_frame
 
-        # 绘制21个关键点和骨架连线
+        # Отрисовка ключевых точек и скелета руки 绘制21个关键点和骨架连线
         if results['hand_landmarks']:
             for idx, hand_landmarks in enumerate(results['hand_landmarks']):
                 output_frame = self._draw_hand_landmarks(output_frame, hand_landmarks, idx)
 
-        # 显示手势结果
+        # Отображение результатов распознавания жестов 显示手势结果
         y_offset = 30
         for i, gesture_name in enumerate(results['gesture_names']):
             confidence = results['confidences'][i] if i < len(results['confidences']) else 0
@@ -230,7 +242,7 @@ class HandDetector(BaseDetector):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
             y_offset += 35
 
-        # 手指状态（调试模式）
+        # Состояние пальцев (режим отладки) 手指状态（调试模式）
         if self.debug_mode and results['finger_states']:
             x_start = w - 150
             y_start = 30
@@ -246,7 +258,7 @@ class HandDetector(BaseDetector):
                                 (x_start, y_start + 25 + i * 80 + j * 18),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
-        # 显示手部数量
+        # Отображение количества обнаруженных рук 显示手部数量
         hand_text = f"Hands detected: {results['num_hands']} (21 landmarks)"
         cv2.putText(output_frame, hand_text, (10, output_frame.shape[0] - 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
