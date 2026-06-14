@@ -5,7 +5,7 @@ import time
 
 
 class CameraInput:
-    """摄像头输入模块"""
+    """摄像头输入模块  Модуль ввода с камеры"""
     
     def __init__(self, camera_id: int = 0, width: int = 640, height: int = 480):
         self.camera_id = camera_id
@@ -31,10 +31,10 @@ class CameraInput:
             self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             
             self.is_opened = True
-            print(f"摄像头打开成功 - 分辨率: {self.width}x{self.height}")
+            print(f"摄像头打开成功Камера успешно включена - 分辨率разрешение: {self.width}x{self.height}")
             return True
         except Exception as e:
-            print(f"打开摄像头失败: {e}")
+            print(f"打开摄像头失败 Не удалось включить камеру: {e}")
             return False
     
     def read_frame(self) -> Optional[np.ndarray]:
@@ -58,4 +58,4 @@ class CameraInput:
         if self.cap:
             self.cap.release()
             self.is_opened = False
-            print("摄像头资源已释放")
+            print("摄像头资源已释放  Ресурсы камеры освобождены")
